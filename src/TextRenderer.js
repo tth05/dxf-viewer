@@ -1,8 +1,9 @@
 import {Entity} from "./DxfScene"
 import {ShapePath} from "three/src/extras/core/ShapePath.js"
 import {ShapeUtils} from "three/src/extras/ShapeUtils.js"
-import {Matrix3, Vector2} from "three"
+import {Matrix3, Vector2, Box2} from "three"
 import {MTextFormatParser} from "./MTextFormatParser"
+import { BackgroundFillSetting } from "./parser/entities/mtext";
 
 /** Regex for parsing special characters in text entities. */
 const SPECIAL_CHARS_RE = /(?:%%([dpcou%]))|(?:\\U\+([0-9a-fA-F]{4}))/g
@@ -183,17 +184,48 @@ export class TextRenderer {
      * precedence over rotation if both provided.
      * @param {number} attachment Attachment point, one of MTextAttachment values.
      * @param {?number} lineSpacing Line spacing ratio relative to default one (5/3 of font size).
+     * @param backgroundFillSetting "Bit flags" for background fill style. See {@link BackgroundFillSetting}
+     * @param fillBoxScale Scale factor for the background fill box.
      * @param {number} color
      * @param {?string} layer
      * @return {Generator<Entity>} Rendering entities. Currently just indexed triangles for each
      *  glyph.
      */
     *RenderMText({formattedText, position, fontSize, width = null, rotation = 0, direction = null,
-                 attachment, lineSpacing = 1, color, layer = null}) {
+                 attachment, lineSpacing = 1, backgroundFillSetting, fillBoxScale = 1.0, color, layer = null}) {
         const box = new TextBox(fontSize, this._GetCharShape.bind(this))
         box.FeedText(formattedText)
         yield* box.Render(position, width, rotation, direction, attachment, lineSpacing, color,
                           layer)
+
+        const hasFrame = backgroundFillSetting &&
+            ((backgroundFillSetting & BackgroundFillSetting.Frame) === BackgroundFillSetting.Frame)
+
+        if (!hasFrame) return;
+
+        const transform = TextBox.calculateTransformMatrix(position, rotation, width, fontSize, attachment)
+
+        const boundingBox = new Box2(new Vector2(0,0), new Vector2(width, fontSize));
+        boundingBox.expandByVector(new Vector2(
+            fontSize * (fillBoxScale - 1),
+            fontSize * (fillBoxScale - 1)
+        ))
+
+        const frameVertices = [
+            new Vector2(boundingBox.min.x, -boundingBox.min.y),
+            new Vector2(boundingBox.max.x, -boundingBox.min.y),
+            new Vector2(boundingBox.max.x, -boundingBox.min.y),
+            new Vector2(boundingBox.max.x, -boundingBox.max.y),
+            new Vector2(boundingBox.max.x, -boundingBox.max.y),
+            new Vector2(boundingBox.min.x, -boundingBox.max.y),
+        ].map(v => v.applyMatrix3(transform))
+        yield new Entity({
+            type: Entity.Type.POLYLINE,
+            vertices: frameVertices,
+            layer, color,
+            lineType: 0,
+            shape: true
+        });
     }
 
     /** @return {CharShape} Shape for the specified character.
@@ -557,45 +589,8 @@ class TextBox {
         height -= lineHeight
         height += this.fontSize
 
-        let origin = new Vector2()
-        switch (attachment) {
-        case MTextAttachment.TOP_LEFT:
-            break
-        case MTextAttachment.TOP_CENTER:
-            origin.x = width / 2
-            break
-        case MTextAttachment.TOP_RIGHT:
-            origin.x = width
-            break
-        case MTextAttachment.MIDDLE_LEFT:
-            origin.y = -height / 2
-            break
-        case MTextAttachment.MIDDLE_CENTER:
-            origin.x = width / 2
-            origin.y = -height / 2
-            break
-        case MTextAttachment.MIDDLE_RIGHT:
-            origin.x = width
-            origin.y = -height / 2
-            break
-        case MTextAttachment.BOTTOM_LEFT:
-            origin.y = -height
-            break
-        case MTextAttachment.BOTTOM_CENTER:
-            origin.x = width / 2
-            origin.y = -height
-            break
-        case MTextAttachment.BOTTOM_RIGHT:
-            origin.x = width
-            origin.y = -height
-            break
-        default:
-            throw new Error("Unhandled alignment")
-        }
-
         /* Transform for each chunk insertion point. */
-        const transform = new Matrix3().translate(-origin.x, -origin.y)
-            .rotate(-rotation * Math.PI / 180).translate(position.x, position.y)
+        const transform = TextBox.calculateTransformMatrix(position, rotation, width, height, attachment)
 
         let y = -this.fontSize
         for (const p of this.paragraphs) {
@@ -625,6 +620,52 @@ class TextBox {
                 y -= lineHeight
             }
         }
+    }
+
+    static calculateOriginOffset(attachment, width, height) {
+        let originOffset = new Vector2()
+        switch (attachment) {
+        case MTextAttachment.TOP_LEFT:
+            break
+        case MTextAttachment.TOP_CENTER:
+            originOffset.x = width / 2
+            break
+        case MTextAttachment.TOP_RIGHT:
+            originOffset.x = width
+            break
+        case MTextAttachment.MIDDLE_LEFT:
+            originOffset.y = -height / 2
+            break
+        case MTextAttachment.MIDDLE_CENTER:
+            originOffset.x = width / 2
+            originOffset.y = -height / 2
+            break
+        case MTextAttachment.MIDDLE_RIGHT:
+            originOffset.x = width
+            originOffset.y = -height / 2
+            break
+        case MTextAttachment.BOTTOM_LEFT:
+            originOffset.y = -height
+            break
+        case MTextAttachment.BOTTOM_CENTER:
+            originOffset.x = width / 2
+            originOffset.y = -height
+            break
+        case MTextAttachment.BOTTOM_RIGHT:
+            originOffset.x = width
+            originOffset.y = -height
+            break
+        default:
+            throw new Error("Unhandled alignment")
+        }
+
+        return originOffset
+    }
+
+    static calculateTransformMatrix(position, rotation, width, height, attachment) {
+        const originOffset = TextBox.calculateOriginOffset(attachment, width, height)
+        return new Matrix3().translate(-originOffset.x, -originOffset.y)
+            .rotate(-rotation * Math.PI / 180).translate(position.x, position.y)
     }
 }
 

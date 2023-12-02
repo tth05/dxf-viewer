@@ -885,6 +885,8 @@ export class DxfScene {
             attachment: entity.attachmentPoint,
             lineSpacing: entity.lineSpacing,
             width: entity.width,
+            backgroundFillSetting: entity.backgroundFillSetting,
+            fillBoxScale: entity.fillBoxScale,
             color, layer
         })
     }
