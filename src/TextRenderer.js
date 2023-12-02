@@ -554,6 +554,8 @@ class TextBox {
             }
         }
         height *= lineHeight
+        height -= lineHeight
+        height += this.fontSize
 
         let origin = new Vector2()
         switch (attachment) {
