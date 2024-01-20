@@ -84,6 +84,7 @@ export class DxfViewer {
 
         this.canvas.addEventListener("pointerdown", this._OnPointerEvent.bind(this))
         this.canvas.addEventListener("pointerup", this._OnPointerEvent.bind(this))
+        this.canvas.addEventListener("pointermove", this._OnPointerEvent.bind(this))
 
         this.Render()
 
@@ -370,6 +371,7 @@ export class DxfViewer {
      *  * "resized" - viewport size changed. Details: {width, height}
      *  * "pointerdown" - Details: {domEvent, position:{x,y}}, position is in scene coordinates.
      *  * "pointerup"
+     *  * "pointermove"
      *  * "viewChanged"
      *  * "message" - Some message from the viewer. {message: string, level: string}.
      *
