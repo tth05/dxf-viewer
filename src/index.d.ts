@@ -1,3 +1,5 @@
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+
 /** See TextRenderer.DefaultOptions for default values and documentation. */
 export type TextRendererOptions = {
     curveSubdivision: number,
@@ -61,6 +63,7 @@ export declare class DxfViewer {
     GetBounds(): {maxX: number, maxY: number, minX: number, minY: number} | null
     GetRenderer(): THREE.WebGLRenderer | null
     GetScene(): THREE.Scene
+    GetControls(): OrbitControls | null
     HasRenderer(): boolean
     Load(params: DxfViewerLoadParams): Promise<void>
     Render(): void
