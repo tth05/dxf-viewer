@@ -183,7 +183,6 @@ export class DxfScene {
                 this.numBlocksFlattened++
             }
         }
-        console.log(`${this.numBlocksFlattened} blocks flattened`)
 
         for (const entity of dxf.entities) {
             if (!this._FilterEntity(entity)) {
@@ -192,7 +191,6 @@ export class DxfScene {
             }
             this._ProcessDxfEntity(entity)
         }
-        console.log(`${this.numEntitiesFiltered} entities filtered`)
 
         this.scene = this._BuildScene()
 

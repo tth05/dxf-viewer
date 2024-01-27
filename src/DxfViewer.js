@@ -207,14 +207,6 @@ export class DxfViewer {
             }
         }
 
-        console.log(`DXF scene:
-                     ${scene.batches.length} batches,
-                     ${this.layers.size} layers,
-                     ${this.blocks.size} blocks,
-                     vertices ${scene.vertices.byteLength} B,
-                     indices ${scene.indices.byteLength} B
-                     transforms ${scene.transforms.byteLength} B`)
-
         /* Instantiate all entities. */
         for (const batch of scene.batches) {
             this._LoadBatch(scene, batch)
